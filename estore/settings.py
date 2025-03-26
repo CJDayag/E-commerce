@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,8 +42,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-    'e_store',
+    'django_extensions',
+    'djoser',
     'corsheaders',
+    'accounts',
+    'products',
+    'orders',
+    'cart',
 ]
 
 MIDDLEWARE = [
@@ -76,9 +82,16 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173/',
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
+CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"]
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'estore.urls'
 
@@ -98,8 +111,13 @@ TEMPLATES = [
     },
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATIC_URL = '/static/'
+
 WSGI_APPLICATION = 'estore.wsgi.application'
 
+AUTH_USER_MODEL = 'accounts.CustomUser'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -111,6 +129,17 @@ DATABASES = {
     }
 }
 
+DJOSER = {
+    'SERIALIZERS': {
+        'user_create': 'accounts.serializers.UserProfileSerializer',
+        'user': 'accounts.serializers.UserProfileSerializer',
+    },
+    'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': True,  # Requires password confirmation
+    'PASSWORD_RESET_CONFIRM_RETYPE': True,
+    'SET_PASSWORD_RETYPE': True,
+
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
