@@ -17,6 +17,6 @@ class UserProfileSerializer(UserSerializer):
         model = CustomUser
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'phone_number', 'address', 'profile_picture'
+            'phone_number', 'address', 'profile_picture', 'is_staff', 'is_superuser'
         ]
         read_only_fields = ['id']

@@ -10,8 +10,10 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Users can only access their own profile
-        return CustomUser.objects.filter(id=self.request.user.id)
+        if self.request.user.is_staff:
+            return CustomUser.objects.all()  # Admins can view all users
+        return CustomUser.objects.filter(id=self.request.user.id)  # Regular users see their profile
+
 
     @action(detail=False, methods=['PUT', 'PATCH'])
     def update_profile(self, request):
@@ -19,4 +21,10 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """Returns the authenticated user's information."""
+        serializer = self.get_serializer(request.user)
         return Response(serializer.data)
