@@ -42,14 +42,35 @@ class CartViewSet(viewsets.ModelViewSet):
         serializer = CartItemSerializer(cart_item)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['DELETE'])
-    def remove_item(self, request):
+    @action(detail=False, methods=['PUT'])
+    def update_item(self, request):
         cart = Cart.objects.get(user=request.user)
-        product_id = request.data.get('product_id')
+        cart_item_id = request.data.get('cart_item_id')
+        quantity = request.data.get('quantity')
+
+        if not quantity or int(quantity) < 1:
+            return Response({'error': 'Quantity must be at least 1'}, status=400)
 
         try:
-            cart_item = CartItem.objects.get(cart=cart, product_id=product_id)
+            cart_item = CartItem.objects.get(id=cart_item_id, cart=cart)
+            cart_item.quantity = int(quantity)
+            cart_item.save()
+            serializer = CartItemSerializer(cart_item)
+            return Response(serializer.data)
+        except CartItem.DoesNotExist:
+            return Response({'error': 'Item not found in cart'}, status=404)
+
+
+    @action(detail=False, methods=['DELETE'])
+    def remove_item(self, request, format=None):
+        cart = Cart.objects.get(user=request.user)
+        cart_item_id = request.data.get('cart_item_id')
+
+        try:
+            # Filter by the cart_item's ID directly
+            cart_item = CartItem.objects.get(id=cart_item_id, cart=cart)
             cart_item.delete()
             return Response({'message': 'Item removed from cart'})
         except CartItem.DoesNotExist:
             return Response({'error': 'Item not found in cart'}, status=404)
+
