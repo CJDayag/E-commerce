@@ -32,6 +32,16 @@ const sidebarNavItems: NavItem[] = [
         title: 'Orders',
         href: '/admin/orders',
         icon: null
+    },
+    {
+        title: 'Promo Codes',
+        href: '/admin/promocodes',
+        icon: null
+    },
+    {
+        title: 'Newsletter',
+        href: '/admin/newsletter',
+        icon: null
     }
 ]
 

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { type BreadcrumbItem, type NavItem } from '@/types';
-import { BookOpen, ShoppingCart, Menu, Search, Home, ShoppingBag, Building, Mail } from 'lucide-react';
+import { BookOpen, ShoppingCart, Menu, Search, Home, ShoppingBag, Building, Mail, Heart, Scale } from 'lucide-react';
 import { CartSheet } from '@/pages/Cart';
 
 // Update NavItem type to include the protected property
@@ -31,6 +31,16 @@ const mainNavItems: ExtendedNavItem[] = [
         title: 'Products',
         href: '/products',
         icon: ShoppingBag,
+    },
+    {
+        title: 'Wishlist',
+        href: '/wishlist',
+        icon: Heart,
+    },
+    {
+        title: 'Compare',
+        href: '/compare',
+        icon: Scale,
     },
     {
         title: 'About Us',
@@ -56,7 +66,6 @@ const rightNavItems: ExtendedNavItem[] = [
         href: '',
         icon: ShoppingCart,
         isCartItem: true,
-        protected: true,
     },
 ];
 

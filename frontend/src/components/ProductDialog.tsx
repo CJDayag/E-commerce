@@ -1,10 +1,11 @@
 // ProductDialog.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Heart, Scale, Star } from "lucide-react";
 
 // Shadcn components
 import {
@@ -33,6 +34,12 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { isInWishlist, toggleWishlist } from "@/lib/wishlist";
+import { isInCompare, toggleCompare, MAX_COMPARE } from "@/lib/compare";
+import { addGuestCartItem } from "@/lib/guest-cart";
 
 // Types
 interface Product {
@@ -67,6 +74,8 @@ export default function ProductDialog({ productId, children }: ProductDialogProp
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [open, setOpen] = useState<boolean>(false);
+    const [isWishlisted, setIsWishlisted] = useState(false);
+    const [isCompared, setIsCompared] = useState(false);
 
     // Form setup
     const form = useForm<FormValues>({
@@ -94,13 +103,88 @@ export default function ProductDialog({ productId, children }: ProductDialogProp
         }
     };
 
+    useEffect(() => {
+        if (product) {
+            setIsWishlisted(isInWishlist(product.id));
+        }
+    }, [product]);
+
+    useEffect(() => {
+        if (product) {
+            setIsCompared(isInCompare(product.id));
+        }
+    }, [product]);
+
+    useEffect(() => {
+        const handler = () => {
+            if (product) {
+                setIsWishlisted(isInWishlist(product.id));
+            }
+        };
+
+        window.addEventListener('wishlist:updated', handler);
+        return () => window.removeEventListener('wishlist:updated', handler);
+    }, [product]);
+
+    useEffect(() => {
+        const handler = () => {
+            if (product) {
+                setIsCompared(isInCompare(product.id));
+            }
+        };
+
+        window.addEventListener('compare:updated', handler);
+        return () => window.removeEventListener('compare:updated', handler);
+    }, [product]);
+
+    const handleWishlistToggle = () => {
+        if (!product) {
+            return;
+        }
+
+        const next = toggleWishlist(product);
+        setIsWishlisted(next);
+        toast.success(next ? 'Added to wishlist' : 'Removed from wishlist');
+    };
+
+    const handleCompareToggle = () => {
+        if (!product) {
+            return;
+        }
+
+        const result = toggleCompare(product);
+
+        if (!result.success) {
+            toast.error(`You can compare up to ${MAX_COMPARE} items.`);
+            return;
+        }
+
+        setIsCompared(result.inCompare);
+        toast.success(result.inCompare ? 'Added to compare' : 'Removed from compare');
+    };
+
     const handleAddToCart = async (data: FormValues) => {
         // Check if user is authenticated by verifying if auth token exists
         const token = localStorage.getItem('authToken');
 
         if (!token) {
-            // User is not authenticated
-            toast.error("Please log in to add items to your cart");
+            if (!product) {
+                toast.error("Product data is unavailable");
+                return;
+            }
+
+            addGuestCartItem({
+                product: {
+                    id: product.id,
+                    name: product.name,
+                    price: Number(product.price),
+                    image: product.image ?? undefined,
+                },
+                quantity: data.quantity,
+            });
+
+            toast.success(`Added ${data.quantity} ${product.name} to cart`);
+            setOpen(false);
             return;
         }
 
@@ -149,18 +233,40 @@ export default function ProductDialog({ productId, children }: ProductDialogProp
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             {/* Left side - Image */}
-                            <div className="flex justify-center items-center h-full">
-                                {product.image ? (
-                                    <img
-                                        src={product.image}
-                                        alt={product.name}
-                                        className="rounded-md object-cover w-full h-full max-h-[400px]"
-                                    />
-                                ) : (
-                                    <div className="bg-muted h-full w-full rounded-md flex items-center justify-center text-muted-foreground min-h-[250px]">
-                                        No image available
+                            <div className="flex h-full flex-col gap-3">
+                                <div className="relative overflow-hidden rounded-md border bg-muted">
+                                    {product.image ? (
+                                        <img
+                                            src={product.image}
+                                            alt={product.name}
+                                            className="h-full max-h-[420px] w-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex min-h-[280px] items-center justify-center text-muted-foreground">
+                                            No image available
+                                        </div>
+                                    )}
+                                    <div className="absolute left-3 top-3">
+                                        <Badge variant={product.stock > 0 ? "secondary" : "destructive"}>
+                                            {product.stock > 0 ? 'In stock' : 'Out of stock'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                {product.image && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className="h-14 w-14 overflow-hidden rounded-md border"
+                                            aria-label="Product image thumbnail"
+                                        >
+                                            <img
+                                                src={product.image}
+                                                alt={product.name}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -169,28 +275,84 @@ export default function ProductDialog({ productId, children }: ProductDialogProp
                             <div>
                                 <Card className="h-full flex flex-col">
                                     <CardHeader>
-                                        <CardTitle className="text-xl flex justify-between items-center">
+                                        <CardTitle className="text-xl flex items-center justify-between gap-3">
                                             <span>Details</span>
-                                            <span className="font-medium">${Number(product.price).toFixed(2)}</span>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    onClick={handleWishlistToggle}
+                                                    aria-pressed={isWishlisted}
+                                                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                                                    className={cn(
+                                                        "h-9 w-9 rounded-full bg-background/80 backdrop-blur",
+                                                        isWishlisted ? "text-red-500" : "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <Heart className={cn("h-4 w-4", isWishlisted && "fill-red-500")} />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    onClick={handleCompareToggle}
+                                                    aria-pressed={isCompared}
+                                                    aria-label={isCompared ? 'Remove from compare' : 'Add to compare'}
+                                                    className={cn(
+                                                        "h-9 w-9 rounded-full bg-background/80 backdrop-blur",
+                                                        isCompared ? "text-primary" : "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <Scale className={cn("h-4 w-4", isCompared && "fill-primary")} />
+                                                </Button>
+                                                <span className="font-medium">${Number(product.price).toFixed(2)}</span>
+                                            </div>
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4 flex-grow">
-                                        <div>
-                                            <h3 className="font-medium">Description</h3>
-                                            <p className="text-sm text-muted-foreground">{product.description}</p>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <h3 className="font-medium">Stock</h3>
+                                    <CardContent className="flex-grow space-y-4">
+                                        <Tabs defaultValue="details" className="w-full">
+                                            <TabsList className="grid w-full grid-cols-3">
+                                                <TabsTrigger value="details">Details</TabsTrigger>
+                                                <TabsTrigger value="specs">Specs</TabsTrigger>
+                                                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="details" className="space-y-4 pt-4">
+                                                <div>
+                                                    <h3 className="text-sm font-medium">Description</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {product.description}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Badge variant="outline">Category: {product.category?.name ?? '—'}</Badge>
+                                                    <Badge variant="outline">Condition: {product.condition}</Badge>
+                                                    <Badge variant="outline">SKU: #{product.id}</Badge>
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="specs" className="space-y-3 pt-4">
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    <div className="text-muted-foreground">Category</div>
+                                                    <div>{product.category?.name ?? '—'}</div>
+                                                    <div className="text-muted-foreground">Condition</div>
+                                                    <div>{product.condition}</div>
+                                                    <div className="text-muted-foreground">Availability</div>
+                                                    <div>{product.stock > 0 ? `${product.stock} available` : 'Out of stock'}</div>
+                                                    <div className="text-muted-foreground">Product ID</div>
+                                                    <div>#{product.id}</div>
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="reviews" className="space-y-3 pt-4">
+                                                <div className="flex items-center gap-1 text-muted-foreground">
+                                                    {[...Array(5)].map((_, index) => (
+                                                        <Star key={index} className="h-4 w-4" />
+                                                    ))}
+                                                </div>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
+                                                    No reviews yet. Be the first to share feedback.
                                                 </p>
-                                            </div>
-                                            <div>
-                                                <h3 className="font-medium">Condition</h3>
-                                                <p className="text-sm text-muted-foreground">{product.condition}</p>
-                                            </div>
-                                        </div>
+                                            </TabsContent>
+                                        </Tabs>
                                     </CardContent>
                                     <Separator />
                                     <CardFooter className="pt-4">

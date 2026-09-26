@@ -19,3 +19,12 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     # Replace existing permission classes with your custom one
     permission_classes = [IsAdminUserOrReadOnly]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        category_id = self.request.query_params.get('category')
+
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+
+        return queryset

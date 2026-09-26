@@ -20,6 +20,7 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     stock = models.PositiveIntegerField()
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='NEW')
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     image = models.ImageField(upload_to='product_images/', blank=True, null=True)
 
     def __str__(self):

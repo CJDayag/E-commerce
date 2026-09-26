@@ -1,5 +1,5 @@
 // src/pages/Checkout.tsx
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -60,6 +60,8 @@ interface Order {
     status: string;
     payment_method: string;
     total_price: number;
+    promo_code?: string | null;
+    discount_amount?: number | string;
     items: OrderItem[];
 }
 
@@ -103,6 +105,10 @@ export default function Checkout() {
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [orderComplete, setOrderComplete] = useState(false);
     const [order, setOrder] = useState<Order | null>(null);
+    const [promoCode, setPromoCode] = useState('');
+    const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+    const [discount, setDiscount] = useState(0);
+    const [shippingMethod, setShippingMethod] = useState('standard');
     const navigate = useNavigate();
 
     // Form setup
@@ -181,6 +187,7 @@ export default function Checkout() {
                 payment_method: values.payment_method,
                 shipping_address: values.shipping_address,
                 phone_number: values.phone_number,
+                promo_code: appliedPromoCode,
             }, {
                 headers: getAuthHeaders()
             });
@@ -215,6 +222,49 @@ export default function Checkout() {
         placeOrder(data);
     };
 
+    const subtotal = useMemo(() => cart?.total_price ?? 0, [cart?.total_price]);
+    const shippingCost = useMemo(() => {
+        if (shippingMethod === 'express') {
+            return 24.99;
+        }
+
+        if (shippingMethod === 'priority') {
+            return 12.99;
+        }
+
+        return 0;
+    }, [shippingMethod]);
+    const estimatedTotal = useMemo(() => {
+        return Math.max(subtotal + shippingCost - discount, 0);
+    }, [subtotal, shippingCost, discount]);
+
+    const handleApplyPromo = async () => {
+        const normalized = promoCode.trim().toUpperCase();
+
+        if (!normalized) {
+            toast.error('Enter a promo code');
+            return;
+        }
+
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/api/orders/promocodes/validate/`,
+                { code: normalized },
+                { headers: getAuthHeaders() }
+            );
+
+            const nextDiscount = Number(response.data.discount_amount) || 0;
+            setDiscount(nextDiscount);
+            setAppliedPromoCode(response.data.code || normalized);
+            toast.success('Promo code applied');
+        } catch (error) {
+            console.error('Failed to validate promo code:', error);
+            setDiscount(0);
+            setAppliedPromoCode(null);
+            toast.error('Invalid promo code');
+        }
+    };
+
     if (orderComplete && order) {
         return (
             <div className="container max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -241,6 +291,16 @@ export default function Checkout() {
                                     <div className="font-medium capitalize">{order.status.toLowerCase()}</div>
                                     <div className="text-muted-foreground">Payment Method:</div>
                                     <div className="font-medium">{order.payment_method === 'COD' ? 'Cash on Delivery' : order.payment_method}</div>
+                                    {order.promo_code && (
+                                        <>
+                                            <div className="text-muted-foreground">Promo Code:</div>
+                                            <div className="font-medium">{order.promo_code}</div>
+                                            <div className="text-muted-foreground">Discount:</div>
+                                            <div className="font-medium text-emerald-600">
+                                                -${Number(order.discount_amount || 0).toFixed(2)}
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="text-muted-foreground">Total:</div>
                                     <span className="font-bold">
                                           ${((order.total_price || order.total_amount || 0) * 1).toFixed(2)}
@@ -295,7 +355,7 @@ export default function Checkout() {
             {isLoading ? (
                 <div className="flex justify-center py-12">Loading checkout information...</div>
             ) : cart && cart.items.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
                     <div className="md:col-span-2">
                         <Card>
                             <CardHeader>
@@ -421,10 +481,12 @@ export default function Checkout() {
                                                         </FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="COD">Cash on Delivery</SelectItem>
+                                                            <SelectItem value="CARD" disabled>Credit/Debit Card (Coming soon)</SelectItem>
+                                                            <SelectItem value="PAYPAL" disabled>PayPal (Coming soon)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormDescription>
-                                                        Currently, only Cash on Delivery is available
+                                                        Additional payment methods are coming soon
                                                     </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>
@@ -457,7 +519,7 @@ export default function Checkout() {
                     </div>
 
                     <div>
-                        <Card>
+                        <Card className="md:sticky md:top-6">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Order Summary</CardTitle>
@@ -466,7 +528,7 @@ export default function Checkout() {
                                 <CardDescription>{cart?.item_count} items in your cart</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     {cart?.items.map((item) => (
                                         <div key={item.id} className="flex justify-between items-start">
                                             <div>
@@ -479,9 +541,60 @@ export default function Checkout() {
 
                                     <Separator />
 
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Subtotal</span>
+                                            <span>${subtotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">Shipping</span>
+                                                <span>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
+                                            </div>
+                                            <Select
+                                                value={shippingMethod}
+                                                onValueChange={setShippingMethod}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Choose shipping" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="standard">Standard (3-5 days) • Free</SelectItem>
+                                                    <SelectItem value="priority">Priority (2-3 days) • $12.99</SelectItem>
+                                                    <SelectItem value="express">Express (1-2 days) • $24.99</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">Promo code</span>
+                                                {discount > 0 && (
+                                                    <span className="text-emerald-600">-${discount.toFixed(2)}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={promoCode}
+                                                    onChange={(event) => setPromoCode(event.target.value)}
+                                                    placeholder="WELCOME10"
+                                                />
+                                                <Button type="button" variant="outline" onClick={handleApplyPromo}>
+                                                    Apply
+                                                </Button>
+                                            </div>
+                                            {appliedPromoCode ? (
+                                                <p className="text-xs text-emerald-600">Applied: {appliedPromoCode}</p>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">Enter a promo code from the banner.</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Separator />
+
                                     <div className="flex justify-between items-center font-medium">
-                                        <span>Total</span>
-                                        <span>${cart?.total_price.toFixed(2)}</span>
+                                        <span>Estimated total</span>
+                                        <span>${estimatedTotal.toFixed(2)}</span>
                                     </div>
 
                                     <div className="pt-4">

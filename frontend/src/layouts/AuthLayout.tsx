@@ -2,6 +2,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AppHeader } from '../components/app-header';
 import { ReactNode } from 'react';
+import { FloatingCartButton } from '../components/floating-cart-button';
+import { PromoBanner } from '../components/promo-banner';
 
 interface AuthLayoutProps {
     children?: ReactNode;
@@ -35,6 +37,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             <main>
                 {children || <Outlet />}
             </main>
+            <PromoBanner />
+            <FloatingCartButton />
         </div>
     );
 }

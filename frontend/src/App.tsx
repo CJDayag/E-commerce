@@ -12,6 +12,8 @@ import AboutUs from './pages/AboutUs';
 import Login from './pages/auth/login';
 import Register from './pages/auth/register';
 import Products from './pages/Products';
+import Wishlist from './pages/Wishlist';
+import Compare from './pages/Compare';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/Dashboard';
 import ProductManagement from '@/pages/admin/ProductManagement';
@@ -19,6 +21,8 @@ import OrderManagement from '@/pages/admin/Orders'
 import CheckOut from '@/pages/Checkout'
 import Orders from '@/pages/Orders';
 import Analytics from '@/pages/admin/Analytics';
+import PromoCodeManagement from '@/pages/admin/PromoCodeManagement';
+import NewsletterManagement from '@/pages/admin/NewsletterManagement';
 import { useAuth } from './context/AuthContext';
 import { Toaster } from '@/components/ui/sonner'
 import { useContext } from 'react';
@@ -54,6 +58,8 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/compare" element={<Compare />} />
               </Route>
 
               {/* User Routes */}
@@ -70,6 +76,8 @@ export default function App() {
                     <Route path="/admin/analytics" element={<Analytics />} />
                     <Route path="/admin/productmanagement" element={<ProductManagement />} />
                     <Route path="/admin/orders" element={<OrderManagement />} />
+                    <Route path="/admin/promocodes" element={<PromoCodeManagement />} />
+                    <Route path="/admin/newsletter" element={<NewsletterManagement />} />
                   </Route>
               ) : null}
 

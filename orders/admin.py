@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem
+from .models import Order, OrderItem, PromoCode
 
 class OrderItemInLine(admin.TabularInline):
     model = OrderItem
@@ -15,3 +15,10 @@ class OrderAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('order', 'product', 'quantity', 'price')
     search_fields = ('order__id', 'product__name')
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount_type', 'amount', 'active', 'starts_at', 'ends_at', 'usage_limit', 'usage_count')
+    list_filter = ('active', 'discount_type')
+    search_fields = ('code',)

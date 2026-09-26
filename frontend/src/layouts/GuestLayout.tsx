@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AppHeader } from '../components/app-header';
+import { FloatingCartButton } from '../components/floating-cart-button';
+import { PromoBanner } from '../components/promo-banner';
 
 const GuestLayout = () => {
   const { loading } = useAuth();
@@ -16,6 +18,8 @@ const GuestLayout = () => {
       <main>
         <Outlet />
       </main>
+      <PromoBanner />
+      <FloatingCartButton />
     </div>
   );
 };

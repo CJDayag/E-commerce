@@ -22,6 +22,7 @@ export interface Product {
     category: any; // Could be an object or ID
     stock: number;
     condition: string;
+    rating?: number;
     image?: string;
 }
 
@@ -32,6 +33,7 @@ export interface ProductFormData {
     category: string;
     stock: number;
     condition: string;
+    rating: number;
     image?: File | null;
 }
 
@@ -59,6 +61,7 @@ export default function ProductForm({
         category: '',
         stock: 0,
         condition: 'NEW',
+        rating: 0,
         image: null
     });
 
@@ -98,6 +101,7 @@ export default function ProductForm({
                         initialData.category.toString(),
                     stock: initialData.stock,
                     condition: initialData.condition || 'NEW',
+                    rating: typeof initialData.rating === 'number' ? initialData.rating : 0,
                     image: null
                 });
 
@@ -120,7 +124,7 @@ export default function ProductForm({
         const { name, value } = e.target;
         setFormData({
             ...formData,
-            [name]: name === 'price' || name === 'stock' ? parseFloat(value) : value
+            [name]: name === 'price' || name === 'stock' || name === 'rating' ? parseFloat(value) : value
         });
     };
 
@@ -166,6 +170,7 @@ export default function ProductForm({
             formDataToSend.append('price', formData.price.toString());
             formDataToSend.append('stock', formData.stock.toString());
             formDataToSend.append('condition', formData.condition);
+            formDataToSend.append('rating', formData.rating.toString());
 
             // Handle category field naming difference between add/edit
             if (isEditMode) {
@@ -265,6 +270,20 @@ export default function ProductForm({
                             min="0"
                             step="0.01"
                             required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rating">Rating (0-5)</Label>
+                        <Input
+                            id="rating"
+                            type="number"
+                            name="rating"
+                            value={formData.rating}
+                            onChange={handleInputChange}
+                            min="0"
+                            max="5"
+                            step="0.1"
                         />
                     </div>
                 </div>
